@@ -2,45 +2,54 @@ import os
 import shutil
 import json
 from datetime import datetime
-from config import destinations, lingua as linguaggio
+from config import destinations, lingua as language
 
 CONFIG_FILE = 'config.py'
 
 def log_action(action):
-    log_folder = os.path.join(os.getcwd(), 'program')
+    # Create a log folder if it doesn't exist
+    log_folder = os.path.join(os.getcwd(), 'DPLOG')
     if not os.path.exists(log_folder):
         os.makedirs(log_folder)
 
+    # Define the path for the log file
     log_file_path = os.path.join(log_folder, 'log.json')
 
+    # Create a log entry with the current timestamp and action
     log_entry = {
         'timestamp': datetime.now().isoformat(),
         'action': action
     }
 
+    # Read existing log data if the file exists
     if os.path.exists(log_file_path):
         with open(log_file_path, 'r') as file:
             data = json.load(file)
     else:
         data = []
 
+    # Append the new log entry
     data.append(log_entry)
 
+    # Write the updated log data to the file
     with open(log_file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
 def show_log():
+    # Define the path for the log file
     log_file_path = os.path.join(os.getcwd(), 'program', 'log.json')
 
+    # Check if the log file exists
     if not os.path.exists(log_file_path):
-        print("Nessun log trovato.")
+        print("No log found.")
         return
 
+    # Read and display the log data
     with open(log_file_path, 'r') as file:
         data = json.load(file)
 
     if not data:
-        print("Il log è vuoto.")
+        print("The log is empty.")
         return
 
     for entry in data:
@@ -54,6 +63,7 @@ def save_destinations_to_config():
 
 class FileOrganizer:
     def __init__(self, source_folder=None):
+        # Initialize the source folder, either from the parameter or by default
         if source_folder is None:
             self.source_folder = self.get_source_folder()
         else:
@@ -61,16 +71,19 @@ class FileOrganizer:
         self.destinations = destinations
 
     def get_source_folder(self):
+        # Get the current working directory as the source folder
         current_dir = os.getcwd()
         return current_dir
 
     def create_destination_folders(self):
+        # Create destination folders if they don't exist
         for folder in self.destinations:
             folder_path = os.path.join(self.source_folder, folder)
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
 
     def move_file(self, filename):
+        # Move a file to the appropriate destination folder based on its extension
         file_path = os.path.join(self.source_folder, filename)
         _, extension = os.path.splitext(filename)
         for folder, extensions in self.destinations.items():
@@ -82,8 +95,9 @@ class FileOrganizer:
                 break
 
     def organize(self):
+        # Organize files in the source folder
         if not os.path.exists(self.source_folder):
-            print(f"La cartella {self.source_folder} non esiste.")
+            print(f"The folder {self.source_folder} does not exist.")
             return
         self.create_destination_folders()
         for filename in os.listdir(self.source_folder):
@@ -93,117 +107,124 @@ class FileOrganizer:
             self.move_file(filename)
 
 def admenu():
+    # Display the admin menu and handle user choices
     while True:
-        print("1. Cambia lingua")
-        print("2. Visualizza informazioni")
-        print("3. Modifica impostazioni")
-        print("4. Visualizza statistiche")
-        print("5. Esci")
+        print("1. Change language")
+        print("2. View information")
+        print("3. Modify settings")
+        print("4. View statistics")
+        print("5. Exit")
 
-        choice = input("Scegli un'opzione (1-5): ").strip()
+        choice = input("Choose an option (1-5): ").strip()
         log_action(f"Admin menu choice: {choice}")
 
         if choice == '1':
-            cambia_lingua()
+            change_language()
         elif choice == '2':
-            visualizza_informazioni()
+            view_information()
         elif choice == '3':
-            modifica_impostazioni()
+            modify_settings()
         elif choice == '4':
-            visualizza_statistiche()
+            view_statistics()
         elif choice == '5':
-            print("Uscita...")
+            print("Exiting...")
             log_action("Admin exited")
             break
         else:
-            print("Opzione non valida. Per favore, scegli un'opzione tra 1 e 5.")
+            print("Invalid option. Please choose a number between 1 and 5.")
             log_action("Invalid admin menu option")
 
-def cambia_lingua():
-    global linguaggio
-    print("Lingue disponibili: it, en")
-    nuova_lingua = input("Inserisci la nuova lingua: ").strip().lower()
-    if nuova_lingua in ["it", "en"]:
-        linguaggio = nuova_lingua
-        print(f"Lingua cambiata a {linguaggio}")
-        log_action(f"Language changed to {linguaggio}")
+def change_language():
+    # Change the language setting
+    global language
+    print("Available languages: it, en")
+    new_language = input("Enter the new language: ").strip().lower()
+    if new_language in ["it", "en"]:
+        language = new_language
+        print(f"Language changed to {language}")
+        log_action(f"Language changed to {language}")
     else:
-        print("Lingua non valida.")
+        print("Invalid language.")
         log_action("Attempted to change to invalid language")
 
-def visualizza_informazioni():
-    print("Visualizzazione del log:")
+def view_information():
+    # Display the log information
+    print("Displaying log:")
     show_log()
 
-def modifica_impostazioni():
+def modify_settings():
+    # Modify the destination folder settings
     global destinations
-    print("Modifica delle impostazioni delle destinazioni:")
+    print("Modifying destination settings:")
     for i, (folder, extensions) in enumerate(destinations.items(), start=1):
-        print(f"{i}. {folder} - Estensioni: {', '.join(extensions)}")
+        print(f"{i}. {folder} - Extensions: {', '.join(extensions)}")
 
     try:
-        scelta = int(input("Scegli una cartella da modificare (numero): "))
-        if 1 <= scelta <= len(destinations):
-            folder = list(destinations.keys())[scelta - 1]
-            print(f"Modifica estensioni per {folder}")
-            print(f"Estensioni attuali: {', '.join(destinations[folder])}")
-            nuove_estensioni = input("Inserisci le nuove estensioni separate da virgola (es. .pdf, .docx): ").strip().split(',')
-            nuove_estensioni = [ext.strip().lower() for ext in nuove_estensioni]
-            destinations[folder] = nuove_estensioni
-            print(f"Estensioni aggiornate per {folder}: {', '.join(destinations[folder])}")
+        choice = int(input("Choose a folder to modify (number): "))
+        if 1 <= choice <= len(destinations):
+            folder = list(destinations.keys())[choice - 1]
+            print(f"Modifying extensions for {folder}")
+            print(f"Current extensions: {', '.join(destinations[folder])}")
+            new_extensions = input("Enter new extensions separated by commas (e.g., .pdf, .docx): ").strip().split(',')
+            new_extensions = [ext.strip().lower() for ext in new_extensions]
+            destinations[folder] = new_extensions
+            print(f"Updated extensions for {folder}: {', '.join(destinations[folder])}")
             save_destinations_to_config()
             log_action(f"Updated extensions for folder '{folder}' to {', '.join(destinations[folder])}")
         else:
-            print("Scelta non valida.")
+            print("Invalid choice.")
     except ValueError:
-        print("Inserimento non valido. Devi inserire un numero.")
+        print("Invalid input. You must enter a number.")
 
-def visualizza_statistiche():
-    print("Statistiche dei file per tipo di destinazione:")
+def view_statistics():
+    # Display file statistics for each destination folder
+    print("File statistics by destination type:")
     for folder in destinations:
         folder_path = os.path.join(os.getcwd(), folder)
         if os.path.exists(folder_path):
             num_files = len([f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))])
-            print(f"{folder}: {num_files} file")
+            print(f"{folder}: {num_files} files")
         else:
-            print(f"{folder}: Cartella non trovata")
+            print(f"{folder}: Folder not found")
     log_action("Displayed file statistics")
 
-def menu(lingua):
-    if lingua == "it":
-        print("Inserire comandi o scrivere 'help' per visualizzare i comandi")
-    elif lingua == "en":
+def menu(language):
+    # Display the main menu and handle user commands
+    if language == "it":
+        print("Enter commands or type 'help' to see the commands")
+    elif language == "en":
         print("Enter commands or type 'help' to see commands")
 
-    comando = input("user: ")
-    log_action(f"User command: {comando}")
+    command = input("user: ")
+    log_action(f"User command: {command}")
 
-    if comando == "exit":
+    if command == "exit":
         log_action("User exited")
         exit()
-    elif comando == "organizza":
+    elif command == "organize":
         organizer = FileOrganizer()
-        print(f"Cartella sorgente: {organizer.source_folder}")
+        print(f"Source folder: {organizer.source_folder}")
         organizer.organize()
-        menu(linguaggio)
-    elif comando == "admin":
-        adpass = input("Inserire la password: ")
+        menu(language)
+    elif command == "admin":
+        admin_password = input("Enter the password: ")
         log_action("Admin mode activated")
-        if adpass == "admin":
-            print("Attivata modalità amministratore")
+        if admin_password == "admin":
+            print("Admin mode activated")
             admenu()
-    elif comando == "help":
-        if lingua == "it":
-            print("Comandi disponibili: organizza, exit, admin")
-        elif lingua == "en":
+    elif command == "help":
+        if language == "it":
             print("Available commands: organize, exit, admin")
-        menu(linguaggio)
+        elif language == "en":
+            print("Available commands: organize, exit, admin")
+        menu(language)
     else:
-        if lingua == "it":
-            print("Comando non riconosciuto")
-        elif lingua == "en":
+        if language == "it":
+            print("Unrecognized command")
+        elif language == "en":
             print("Unrecognized command")
         log_action("Unrecognized command")
-        menu(linguaggio)
+        menu(language)
 
-menu(linguaggio)
+# Start the program with the current language setting
+menu(language)
