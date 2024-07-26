@@ -2,7 +2,8 @@ import os
 import shutil
 import json
 from datetime import datetime
-from config import destinations, lingua as language
+language = "it"
+from config import destinations as destinations
 
 CONFIG_FILE = 'config.py'
 
@@ -37,7 +38,7 @@ def log_action(action):
 
 def show_log():
     # Define the path for the log file
-    log_file_path = os.path.join(os.getcwd(), 'program', 'log.json')
+    log_file_path = os.path.join(os.getcwd(), 'DPLOG', 'log.json')
 
     # Check if the log file exists
     if not os.path.exists(log_file_path):
@@ -68,6 +69,7 @@ class FileOrganizer:
             self.source_folder = self.get_source_folder()
         else:
             self.source_folder = source_folder
+
         self.destinations = destinations
 
     def get_source_folder(self):
@@ -112,7 +114,7 @@ def admenu():
         print("1. Change language")
         print("2. View information")
         print("3. Modify settings")
-        print("4. View statistics")
+        print("4. Return to main menu")
         print("5. Exit")
 
         choice = input("Choose an option (1-5): ").strip()
@@ -125,7 +127,7 @@ def admenu():
         elif choice == '3':
             modify_settings()
         elif choice == '4':
-            view_statistics()
+            menu(language)
         elif choice == '5':
             print("Exiting...")
             log_action("Admin exited")
@@ -159,8 +161,10 @@ def modify_settings():
     for i, (folder, extensions) in enumerate(destinations.items(), start=1):
         print(f"{i}. {folder} - Extensions: {', '.join(extensions)}")
 
+    print(f"{len(destinations) + 1}. Add a new folder")
+
     try:
-        choice = int(input("Choose a folder to modify (number): "))
+        choice = int(input("Choose a folder to modify or add a new one (number): "))
         if 1 <= choice <= len(destinations):
             folder = list(destinations.keys())[choice - 1]
             print(f"Modifying extensions for {folder}")
@@ -171,22 +175,18 @@ def modify_settings():
             print(f"Updated extensions for {folder}: {', '.join(destinations[folder])}")
             save_destinations_to_config()
             log_action(f"Updated extensions for folder '{folder}' to {', '.join(destinations[folder])}")
+        elif choice == len(destinations) + 1:
+            new_folder = input("Enter the name of the new folder: ").strip()
+            new_extensions = input("Enter the extensions for the new folder separated by commas (e.g., .pdf, .docx): ").strip().split(',')
+            new_extensions = [ext.strip().lower() for ext in new_extensions]
+            destinations[new_folder] = new_extensions
+            print(f"Added new folder '{new_folder}' with extensions: {', '.join(new_extensions)}")
+            save_destinations_to_config()
+            log_action(f"Added new folder '{new_folder}' with extensions: {', '.join(new_extensions)}")
         else:
             print("Invalid choice.")
     except ValueError:
         print("Invalid input. You must enter a number.")
-
-def view_statistics():
-    # Display file statistics for each destination folder
-    print("File statistics by destination type:")
-    for folder in destinations:
-        folder_path = os.path.join(os.getcwd(), folder)
-        if os.path.exists(folder_path):
-            num_files = len([f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))])
-            print(f"{folder}: {num_files} files")
-        else:
-            print(f"{folder}: Folder not found")
-    log_action("Displayed file statistics")
 
 def menu(language):
     # Display the main menu and handle user commands
@@ -214,9 +214,9 @@ def menu(language):
             admenu()
     elif command == "help":
         if language == "it":
-            print("Available commands: organize, exit, admin")
+            print("comandi disponibili: organize, exit")
         elif language == "en":
-            print("Available commands: organize, exit, admin")
+            print("Available commands: organize, exit")
         menu(language)
     else:
         if language == "it":
@@ -228,3 +228,4 @@ def menu(language):
 
 # Start the program with the current language setting
 menu(language)
+
