@@ -23,7 +23,7 @@ With DocuPhalanx, every action is meticulously logged. The system maintains a de
 3. Administrative Functions
 DocuPhalanx includes robust administrative features that offer enhanced control over the system:
 
-Change Language: The tool supports multilingual functionality, allowing users to switch between languages like Italian and English. This flexibility ensures that the system can cater to diverse user needs and preferences.
+
 View Log Information: Administrators can easily access and review the action log, which provides valuable insights into the file management process and helps in maintaining operational transparency.
 Modify Settings: The destinations dictionary, which defines how files are categorized, can be dynamically updated. Administrators can add, remove, or change file extensions and folders directly through the system. Updated settings are automatically saved to the configuration file, ensuring that changes are preserved and applied consistently.
 View Statistics: DocuPhalanx offers a detailed statistical overview of the files in each categorized folder. This feature provides valuable insights into file distribution and folder usage, helping administrators to better understand and manage their file storage.
