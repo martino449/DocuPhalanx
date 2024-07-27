@@ -33,3 +33,6 @@ View Statistics: DocuPhalanx offers a detailed statistical overview of the files
 DocuPhalanx is built using Python, leveraging essential modules such as os, shutil, and json for effective file handling and configuration. The main script orchestrates the core functionalities, while config.py manages the configuration settings. The combination of these components ensures a robust, reliable, and flexible file management solution.
 
 By incorporating advanced automation with intuitive administrative controls, DocuPhalanx offers a powerful tool for anyone seeking to enhance their file management processes. Whether you are managing a personal collection of files or overseeing complex organizational data, DocuPhalanx provides the efficiency, flexibility, and control you need to streamline your workflow and maintain optimal organization.
+
+##### IMPORTANT
+to change  the configs activate admin mode typing admin in the console and inserting admin as the password when asked!
