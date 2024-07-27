@@ -3,49 +3,40 @@ import shutil
 import json
 from datetime import datetime
 language = "it"
-from config import destinations as destinations
+from config import destinations, patterns
 
 CONFIG_FILE = 'config.py'
 
 def log_action(action):
-    # Create a log folder if it doesn't exist
     log_folder = os.path.join(os.getcwd(), 'DPLOG')
     if not os.path.exists(log_folder):
         os.makedirs(log_folder)
 
-    # Define the path for the log file
     log_file_path = os.path.join(log_folder, 'log.json')
 
-    # Create a log entry with the current timestamp and action
     log_entry = {
         'timestamp': datetime.now().isoformat(),
         'action': action
     }
 
-    # Read existing log data if the file exists
     if os.path.exists(log_file_path):
         with open(log_file_path, 'r') as file:
             data = json.load(file)
     else:
         data = []
 
-    # Append the new log entry
     data.append(log_entry)
 
-    # Write the updated log data to the file
     with open(log_file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
 def show_log():
-    # Define the path for the log file
     log_file_path = os.path.join(os.getcwd(), 'DPLOG', 'log.json')
 
-    # Check if the log file exists
     if not os.path.exists(log_file_path):
         print("No log found.")
         return
 
-    # Read and display the log data
     with open(log_file_path, 'r') as file:
         data = json.load(file)
 
@@ -56,15 +47,16 @@ def show_log():
     for entry in data:
         print(f"{entry['timestamp']}: {entry['action']}")
 
-def save_destinations_to_config():
-    # Write the updated destinations to the config file
-    config_content = f"destinations = {json.dumps(destinations, indent=4)}\n"
+def save_config_to_file():
+    config_content = (
+        f"destinations = {json.dumps(destinations, indent=4)}\n\n"
+        f"patterns = {json.dumps(patterns, indent=4)}\n"
+    )
     with open(CONFIG_FILE, 'w') as file:
         file.write(config_content)
 
 class FileOrganizer:
     def __init__(self, source_folder=None):
-        # Initialize the source folder, either from the parameter or by default
         if source_folder is None:
             self.source_folder = self.get_source_folder()
         else:
@@ -73,51 +65,61 @@ class FileOrganizer:
         self.destinations = destinations
 
     def get_source_folder(self):
-        # Get the current working directory as the source folder
         current_dir = os.getcwd()
         return current_dir
 
-    def create_destination_folders(self):
-        # Create destination folders if they don't exist
-        for folder in self.destinations:
+    def create_destination_folders(self, folders):
+        for folder in folders:
             folder_path = os.path.join(self.source_folder, folder)
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
 
-    def move_file(self, filename):
-        # Move a file to the appropriate destination folder based on its extension
+    def move_file(self, filename, folder):
         file_path = os.path.join(self.source_folder, filename)
-        _, extension = os.path.splitext(filename)
-        for folder, extensions in self.destinations.items():
-            if extension.lower() in extensions:
-                destination_path = os.path.join(self.source_folder, folder, filename)
-                shutil.move(file_path, destination_path)
-                print(f"Moved: {filename} -> {folder}")
-                log_action(f"Moved file: {filename} to {folder}")
-                break
+        destination_path = os.path.join(self.source_folder, folder, filename)
+        shutil.move(file_path, destination_path)
+        print(f"Moved: {filename} -> {folder}")
+        log_action(f"Moved file: {filename} to {folder}")
 
     def organize(self):
-        # Organize files in the source folder
         if not os.path.exists(self.source_folder):
             print(f"The folder {self.source_folder} does not exist.")
             return
-        self.create_destination_folders()
+        self.create_destination_folders(self.destinations.keys())
         for filename in os.listdir(self.source_folder):
             file_path = os.path.join(self.source_folder, filename)
             if os.path.isdir(file_path):
                 continue
-            self.move_file(filename)
+            _, extension = os.path.splitext(filename)
+            for folder, extensions in self.destinations.items():
+                if extension.lower() in extensions:
+                    self.move_file(filename, folder)
+                    break
+
+    def organize_by_name_pattern(self):
+        if not os.path.exists(self.source_folder):
+            print(f"The folder {self.source_folder} does not exist.")
+            return
+        self.create_destination_folders(patterns.values())
+        for filename in os.listdir(self.source_folder):
+            file_path = os.path.join(self.source_folder, filename)
+            if os.path.isdir(file_path):
+                continue
+            for pattern, folder in patterns.items():
+                if pattern in filename:
+                    self.move_file(filename, folder)
+                    break
 
 def admenu():
-    # Display the admin menu and handle user choices
     while True:
         print("1. Change language")
         print("2. View information")
         print("3. Modify settings")
-        print("4. Return to main menu")
-        print("5. Exit")
+        print("4. Modify patterns")
+        print("5. Return to main menu")
+        print("6. Exit")
 
-        choice = input("Choose an option (1-5): ").strip()
+        choice = input("Choose an option (1-6): ").strip()
         log_action(f"Admin menu choice: {choice}")
 
         if choice == '1':
@@ -127,17 +129,18 @@ def admenu():
         elif choice == '3':
             modify_settings()
         elif choice == '4':
-            menu(language)
+            modify_patterns()
         elif choice == '5':
+            menu(language)
+        elif choice == '6':
             print("Exiting...")
             log_action("Admin exited")
             break
         else:
-            print("Invalid option. Please choose a number between 1 and 5.")
+            print("Invalid option. Please choose a number between 1 and 6.")
             log_action("Invalid admin menu option")
 
 def change_language():
-    # Change the language setting
     global language
     print("Available languages: it, en")
     new_language = input("Enter the new language: ").strip().lower()
@@ -150,12 +153,10 @@ def change_language():
         log_action("Attempted to change to invalid language")
 
 def view_information():
-    # Display the log information
     print("Displaying log:")
     show_log()
 
 def modify_settings():
-    # Modify the destination folder settings
     global destinations
     print("Modifying destination settings:")
     for i, (folder, extensions) in enumerate(destinations.items(), start=1):
@@ -173,7 +174,7 @@ def modify_settings():
             new_extensions = [ext.strip().lower() for ext in new_extensions]
             destinations[folder] = new_extensions
             print(f"Updated extensions for {folder}: {', '.join(destinations[folder])}")
-            save_destinations_to_config()
+            save_config_to_file()
             log_action(f"Updated extensions for folder '{folder}' to {', '.join(destinations[folder])}")
         elif choice == len(destinations) + 1:
             new_folder = input("Enter the name of the new folder: ").strip()
@@ -181,15 +182,55 @@ def modify_settings():
             new_extensions = [ext.strip().lower() for ext in new_extensions]
             destinations[new_folder] = new_extensions
             print(f"Added new folder '{new_folder}' with extensions: {', '.join(new_extensions)}")
-            save_destinations_to_config()
+            save_config_to_file()
             log_action(f"Added new folder '{new_folder}' with extensions: {', '.join(new_extensions)}")
         else:
             print("Invalid choice.")
     except ValueError:
         print("Invalid input. You must enter a number.")
 
+def modify_patterns():
+    global patterns
+    print("Modifying name patterns:")
+    for i, (pattern, folder) in enumerate(patterns.items(), start=1):
+        print(f"{i}. Pattern: '{pattern}' -> Folder: '{folder}'")
+
+    print(f"{len(patterns) + 1}. Add a new pattern")
+    print(f"{len(patterns) + 2}. Remove an existing pattern")
+
+    try:
+        choice = int(input("Choose an option (number): "))
+        if 1 <= choice <= len(patterns):
+            pattern = list(patterns.keys())[choice - 1]
+            print(f"Modifying folder for pattern '{pattern}'")
+            new_folder = input(f"Enter new folder for pattern '{pattern}': ").strip()
+            patterns[pattern] = new_folder
+            print(f"Updated folder for pattern '{pattern}': {new_folder}")
+            save_config_to_file()
+            log_action(f"Updated folder for pattern '{pattern}' to {new_folder}")
+        elif choice == len(patterns) + 1:
+            new_pattern = input("Enter the new pattern: ").strip()
+            new_folder = input("Enter the folder for the new pattern: ").strip()
+            patterns[new_pattern] = new_folder
+            print(f"Added new pattern '{new_pattern}' with folder: '{new_folder}'")
+            save_config_to_file()
+            log_action(f"Added new pattern '{new_pattern}' with folder: '{new_folder}'")
+        elif choice == len(patterns) + 2:
+            del_choice = int(input("Enter the number of the pattern to remove: "))
+            if 1 <= del_choice <= len(patterns):
+                del_pattern = list(patterns.keys())[del_choice - 1]
+                del patterns[del_pattern]
+                print(f"Removed pattern '{del_pattern}'")
+                save_config_to_file()
+                log_action(f"Removed pattern '{del_pattern}'")
+            else:
+                print("Invalid choice.")
+        else:
+            print("Invalid choice.")
+    except ValueError:
+        print("Invalid input. You must enter a number.")
+
 def menu(language):
-    # Display the main menu and handle user commands
     if language == "it":
         print("Enter commands or type 'help' to see the commands")
     elif language == "en":
@@ -206,6 +247,11 @@ def menu(language):
         print(f"Source folder: {organizer.source_folder}")
         organizer.organize()
         menu(language)
+    elif command == "organize_by_pattern":
+        organizer = FileOrganizer()
+        print(f"Source folder: {organizer.source_folder}")
+        organizer.organize_by_name_pattern()
+        menu(language)
     elif command == "admin":
         admin_password = input("Enter the password: ")
         log_action("Admin mode activated")
@@ -214,9 +260,9 @@ def menu(language):
             admenu()
     elif command == "help":
         if language == "it":
-            print("comandi disponibili: organize, exit")
+            print("comandi disponibili: organize, organize_by_pattern, exit")
         elif language == "en":
-            print("Available commands: organize, exit")
+            print("Available commands: organize, organize_by_pattern, exit")
         menu(language)
     else:
         if language == "it":
@@ -226,6 +272,4 @@ def menu(language):
         log_action("Unrecognized command")
         menu(language)
 
-# Start the program with the current language setting
 menu(language)
-
