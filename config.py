@@ -1,7 +1,7 @@
 destinations = {
     "Documents": [
-        ".docx",
         ".pdf",
+        ".docx",
         ".txt"
     ],
     "Images": [
@@ -10,4 +10,17 @@ destinations = {
         ".png",
         ".gif"
     ],
+    "Videos": [
+        ".mp4",
+        ".mov",
+        ".avi"
+    ],
+    "zip": [
+        ".zip"
+    ]
+}
+
+patterns = {
+    "2014": "2014_Files",
+    "2015": "2015_Files"
 }
