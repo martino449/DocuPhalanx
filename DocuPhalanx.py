@@ -2,10 +2,13 @@ import os
 import shutil
 import json
 from datetime import datetime
-language = "it"
 from config import destinations, patterns
 
 CONFIG_FILE = 'config.py'
+
+IGNORE_EXTENSIONS = ['.py', '.toml', '.lock', '.cache', '.replit', '.git', '.gitignore', '.gitattributes', '.gitmodules', '.DS_Store']
+
+language  = "en"
 
 def log_action(action):
     log_folder = os.path.join(os.getcwd(), 'DPLOG')
@@ -91,6 +94,8 @@ class FileOrganizer:
             if os.path.isdir(file_path):
                 continue
             _, extension = os.path.splitext(filename)
+            if extension.lower() in IGNORE_EXTENSIONS:
+                continue
             for folder, extensions in self.destinations.items():
                 if extension.lower() in extensions:
                     self.move_file(filename, folder)
@@ -105,10 +110,39 @@ class FileOrganizer:
             file_path = os.path.join(self.source_folder, filename)
             if os.path.isdir(file_path):
                 continue
+            if any(filename.endswith(ext) for ext in IGNORE_EXTENSIONS):
+                continue
             for pattern, folder in patterns.items():
                 if pattern in filename:
                     self.move_file(filename, folder)
                     break
+
+    def organize_by_size(self):
+        if not os.path.exists(self.source_folder):
+            print(f"The folder {self.source_folder} does not exist.")
+            return
+        size_categories = ['Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gigantic']
+        self.create_destination_folders(size_categories)
+        for filename in os.listdir(self.source_folder):
+            file_path = os.path.join(self.source_folder, filename)
+            if os.path.isdir(file_path):
+                continue
+            _, extension = os.path.splitext(filename)
+            if extension.lower() in IGNORE_EXTENSIONS:
+                continue
+            file_size = os.path.getsize(file_path)
+            if file_size < 1024:  # less than 1 KB
+                self.move_file(filename, 'Tiny')
+            elif 1024 <= file_size < 1048576:  # between 1 KB and 1 MB
+                self.move_file(filename, 'Small')
+            elif 1048576 <= file_size < 10485760:  # between 1 MB and 10 MB
+                self.move_file(filename, 'Medium')
+            elif 10485760 <= file_size < 104857600:  # between 10 MB and 100 MB
+                self.move_file(filename, 'Large')
+            elif 104857600 <= file_size < 1073741824:  # between 100 MB and 1 GB
+                self.move_file(filename, 'Huge')
+            else:  # 1 GB or larger
+                self.move_file(filename, 'Gigantic')
 
 def admenu():
     while True:
@@ -230,7 +264,7 @@ def modify_patterns():
     except ValueError:
         print("Invalid input. You must enter a number.")
 
-def menu(language):
+def menu(language="en"):
     if language == "it":
         print("Enter commands or type 'help' to see the commands")
     elif language == "en":
@@ -252,6 +286,11 @@ def menu(language):
         print(f"Source folder: {organizer.source_folder}")
         organizer.organize_by_name_pattern()
         menu(language)
+    elif command == "organize_by_size":
+        organizer = FileOrganizer()
+        print(f"Source folder: {organizer.source_folder}")
+        organizer.organize_by_size()
+        menu(language)
     elif command == "admin":
         admin_password = input("Enter the password: ")
         log_action("Admin mode activated")
@@ -260,9 +299,9 @@ def menu(language):
             admenu()
     elif command == "help":
         if language == "it":
-            print("comandi disponibili: organize, organize_by_pattern, exit")
+            print("comandi disponibili: organize, organize_by_pattern, organize_by_size, exit")
         elif language == "en":
-            print("Available commands: organize, organize_by_pattern, exit")
+            print("Available commands: organize, organize_by_pattern, organize_by_size, exit")
         menu(language)
     else:
         if language == "it":
