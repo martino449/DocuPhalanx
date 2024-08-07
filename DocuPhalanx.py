@@ -6,14 +6,16 @@ from config import destinations, patterns
 
 CONFIG_FILE = 'config.py'
 
-IGNORE_EXTENSIONS = ['.py', '.toml', '.lock', '.cache', '.replit', '.git', '.gitignore', '.gitattributes', '.gitmodules', '.DS_Store']
+IGNORE_EXTENSIONS = {
+    '.py', '.toml', '.lock', '.cache', '.replit', '.git', '.gitignore', 
+    '.gitattributes', '.gitmodules', '.DS_Store'
+}
 
-language  = "en"
+language = "en"
 
 def log_action(action):
     log_folder = os.path.join(os.getcwd(), 'DPLOG')
-    if not os.path.exists(log_folder):
-        os.makedirs(log_folder)
+    os.makedirs(log_folder, exist_ok=True)
 
     log_file_path = os.path.join(log_folder, 'log.json')
 
@@ -60,22 +62,13 @@ def save_config_to_file():
 
 class FileOrganizer:
     def __init__(self, source_folder=None):
-        if source_folder is None:
-            self.source_folder = self.get_source_folder()
-        else:
-            self.source_folder = source_folder
-
+        self.source_folder = source_folder or os.getcwd()
         self.destinations = destinations
-
-    def get_source_folder(self):
-        current_dir = os.getcwd()
-        return current_dir
 
     def create_destination_folders(self, folders):
         for folder in folders:
             folder_path = os.path.join(self.source_folder, folder)
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
+            os.makedirs(folder_path, exist_ok=True)
 
     def move_file(self, filename, folder):
         file_path = os.path.join(self.source_folder, filename)
@@ -88,16 +81,16 @@ class FileOrganizer:
         if not os.path.exists(self.source_folder):
             print(f"The folder {self.source_folder} does not exist.")
             return
+        
         self.create_destination_folders(self.destinations.keys())
+
         for filename in os.listdir(self.source_folder):
             file_path = os.path.join(self.source_folder, filename)
-            if os.path.isdir(file_path):
+            if os.path.isdir(file_path) or os.path.splitext(filename)[1].lower() in IGNORE_EXTENSIONS:
                 continue
-            _, extension = os.path.splitext(filename)
-            if extension.lower() in IGNORE_EXTENSIONS:
-                continue
+
             for folder, extensions in self.destinations.items():
-                if extension.lower() in extensions:
+                if os.path.splitext(filename)[1].lower() in extensions:
                     self.move_file(filename, folder)
                     break
 
@@ -105,13 +98,14 @@ class FileOrganizer:
         if not os.path.exists(self.source_folder):
             print(f"The folder {self.source_folder} does not exist.")
             return
+        
         self.create_destination_folders(patterns.values())
+
         for filename in os.listdir(self.source_folder):
             file_path = os.path.join(self.source_folder, filename)
-            if os.path.isdir(file_path):
+            if os.path.isdir(file_path) or any(filename.endswith(ext) for ext in IGNORE_EXTENSIONS):
                 continue
-            if any(filename.endswith(ext) for ext in IGNORE_EXTENSIONS):
-                continue
+
             for pattern, folder in patterns.items():
                 if pattern in filename:
                     self.move_file(filename, folder)
@@ -121,31 +115,39 @@ class FileOrganizer:
         if not os.path.exists(self.source_folder):
             print(f"The folder {self.source_folder} does not exist.")
             return
+
         size_categories = ['Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gigantic']
         self.create_destination_folders(size_categories)
+
+        size_limits = [
+            (1024, 'Tiny'), 
+            (1048576, 'Small'), 
+            (10485760, 'Medium'), 
+            (104857600, 'Large'), 
+            (1073741824, 'Huge')
+        ]
+
         for filename in os.listdir(self.source_folder):
             file_path = os.path.join(self.source_folder, filename)
-            if os.path.isdir(file_path):
+            if os.path.isdir(file_path) or os.path.splitext(filename)[1].lower() in IGNORE_EXTENSIONS:
                 continue
-            _, extension = os.path.splitext(filename)
-            if extension.lower() in IGNORE_EXTENSIONS:
-                continue
+
             file_size = os.path.getsize(file_path)
-            if file_size < 1024:  # less than 1 KB
-                self.move_file(filename, 'Tiny')
-            elif 1024 <= file_size < 1048576:  # between 1 KB and 1 MB
-                self.move_file(filename, 'Small')
-            elif 1048576 <= file_size < 10485760:  # between 1 MB and 10 MB
-                self.move_file(filename, 'Medium')
-            elif 10485760 <= file_size < 104857600:  # between 10 MB and 100 MB
-                self.move_file(filename, 'Large')
-            elif 104857600 <= file_size < 1073741824:  # between 100 MB and 1 GB
-                self.move_file(filename, 'Huge')
-            else:  # 1 GB or larger
-                self.move_file(filename, 'Gigantic')
+            category = next((cat for size, cat in reversed(size_limits) if file_size < size), 'Gigantic')
+            self.move_file(filename, category)
 
 def admenu():
+    menu_options = {
+        '1': change_language,
+        '2': view_information,
+        '3': modify_settings,
+        '4': modify_patterns,
+        '5': lambda: menu(language),
+        '6': lambda: exit_program()
+    }
+
     while True:
+        print("\nAdmin Menu:")
         print("1. Change language")
         print("2. View information")
         print("3. Modify settings")
@@ -156,29 +158,19 @@ def admenu():
         choice = input("Choose an option (1-6): ").strip()
         log_action(f"Admin menu choice: {choice}")
 
-        if choice == '1':
-            change_language()
-        elif choice == '2':
-            view_information()
-        elif choice == '3':
-            modify_settings()
-        elif choice == '4':
-            modify_patterns()
-        elif choice == '5':
-            menu(language)
-        elif choice == '6':
-            print("Exiting...")
-            log_action("Admin exited")
-            break
+        if choice in menu_options:
+            menu_options[choice]()
         else:
             print("Invalid option. Please choose a number between 1 and 6.")
             log_action("Invalid admin menu option")
 
 def change_language():
     global language
+    available_languages = {"it", "en"}
     print("Available languages: it, en")
     new_language = input("Enter the new language: ").strip().lower()
-    if new_language in ["it", "en"]:
+
+    if new_language in available_languages:
         language = new_language
         print(f"Language changed to {language}")
         log_action(f"Language changed to {language}")
@@ -193,6 +185,7 @@ def view_information():
 def modify_settings():
     global destinations
     print("Modifying destination settings:")
+
     for i, (folder, extensions) in enumerate(destinations.items(), start=1):
         print(f"{i}. {folder} - Extensions: {', '.join(extensions)}")
 
@@ -205,16 +198,14 @@ def modify_settings():
             print(f"Modifying extensions for {folder}")
             print(f"Current extensions: {', '.join(destinations[folder])}")
             new_extensions = input("Enter new extensions separated by commas (e.g., .pdf, .docx): ").strip().split(',')
-            new_extensions = [ext.strip().lower() for ext in new_extensions]
-            destinations[folder] = new_extensions
+            destinations[folder] = [ext.strip().lower() for ext in new_extensions]
             print(f"Updated extensions for {folder}: {', '.join(destinations[folder])}")
             save_config_to_file()
             log_action(f"Updated extensions for folder '{folder}' to {', '.join(destinations[folder])}")
         elif choice == len(destinations) + 1:
             new_folder = input("Enter the name of the new folder: ").strip()
             new_extensions = input("Enter the extensions for the new folder separated by commas (e.g., .pdf, .docx): ").strip().split(',')
-            new_extensions = [ext.strip().lower() for ext in new_extensions]
-            destinations[new_folder] = new_extensions
+            destinations[new_folder] = [ext.strip().lower() for ext in new_extensions]
             print(f"Added new folder '{new_folder}' with extensions: {', '.join(new_extensions)}")
             save_config_to_file()
             log_action(f"Added new folder '{new_folder}' with extensions: {', '.join(new_extensions)}")
@@ -226,6 +217,7 @@ def modify_settings():
 def modify_patterns():
     global patterns
     print("Modifying name patterns:")
+
     for i, (pattern, folder) in enumerate(patterns.items(), start=1):
         print(f"{i}. Pattern: '{pattern}' -> Folder: '{folder}'")
 
@@ -265,50 +257,55 @@ def modify_patterns():
         print("Invalid input. You must enter a number.")
 
 def menu(language="en"):
-    if language == "it":
-        print("Enter commands or type 'help' to see the commands")
-    elif language == "en":
-        print("Enter commands or type 'help' to see commands")
+    greetings = {
+        "it": "Inserisci comandi o digita 'help' per vedere i comandi",
+        "en": "Enter commands or type 'help' to see commands"
+    }
+    print(greetings.get(language, greetings["en"]))
 
-    command = input("user: ")
+    command = input("user: ").strip().lower()
     log_action(f"User command: {command}")
 
-    if command == "exit":
-        log_action("User exited")
-        exit()
-    elif command == "organize":
-        organizer = FileOrganizer()
-        print(f"Source folder: {organizer.source_folder}")
-        organizer.organize()
-        menu(language)
-    elif command == "organize_by_pattern":
-        organizer = FileOrganizer()
-        print(f"Source folder: {organizer.source_folder}")
-        organizer.organize_by_name_pattern()
-        menu(language)
-    elif command == "organize_by_size":
-        organizer = FileOrganizer()
-        print(f"Source folder: {organizer.source_folder}")
-        organizer.organize_by_size()
-        menu(language)
-    elif command == "admin":
-        admin_password = input("Enter the password: ")
-        log_action("Admin mode activated")
-        if admin_password == "admin":
-            print("Admin mode activated")
-            admenu()
-    elif command == "help":
-        if language == "it":
-            print("comandi disponibili: organize, organize_by_pattern, organize_by_size, exit")
-        elif language == "en":
-            print("Available commands: organize, organize_by_pattern, organize_by_size, exit")
-        menu(language)
+    commands = {
+        "exit": exit_program,
+        "organize": lambda: execute_organizer_command('organize'),
+        "organize_by_pattern": lambda: execute_organizer_command('organize_by_name_pattern'),
+        "organize_by_size": lambda: execute_organizer_command('organize_by_size'),
+        "admin": admin_mode,
+        "help": lambda: print_help(language)
+    }
+
+    if command in commands:
+        commands[command]()
     else:
-        if language == "it":
-            print("Unrecognized command")
-        elif language == "en":
-            print("Unrecognized command")
+        print("Unrecognized command")
         log_action("Unrecognized command")
         menu(language)
+
+def execute_organizer_command(command):
+    organizer = FileOrganizer()
+    print(f"Source folder: {organizer.source_folder}")
+    getattr(organizer, command)()
+    menu(language)
+
+def admin_mode():
+    admin_password = input("Enter the password: ")
+    log_action("Admin mode activated")
+    if admin_password == "admin":
+        print("Admin mode activated")
+        admenu()
+
+def print_help(language):
+    help_text = {
+        "it": "comandi disponibili: organize, organize_by_pattern, organize_by_size, exit",
+        "en": "Available commands: organize, organize_by_pattern, organize_by_size, exit"
+    }
+    print(help_text.get(language, help_text["en"]))
+    menu(language)
+
+def exit_program():
+    print("Exiting...")
+    log_action("User exited")
+    exit()
 
 menu(language)
