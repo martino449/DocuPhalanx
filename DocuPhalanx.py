@@ -81,7 +81,7 @@ class FileOrganizer:
         if not os.path.exists(self.source_folder):
             print(f"The folder {self.source_folder} does not exist.")
             return
-        
+
         self.create_destination_folders(self.destinations.keys())
 
         for filename in os.listdir(self.source_folder):
@@ -98,7 +98,7 @@ class FileOrganizer:
         if not os.path.exists(self.source_folder):
             print(f"The folder {self.source_folder} does not exist.")
             return
-        
+
         self.create_destination_folders(patterns.values())
 
         for filename in os.listdir(self.source_folder):
@@ -136,33 +136,43 @@ class FileOrganizer:
             category = next((cat for size, cat in reversed(size_limits) if file_size < size), 'Gigantic')
             self.move_file(filename, category)
 
-def admenu():
+def unified_menu(language="en"):
+    greetings = {
+        "it": "Inserisci comandi o digita 'help' per vedere i comandi",
+        "en": "Enter commands or type 'help' to see commands"
+    }
+    print(greetings.get(language, greetings["en"]))
+
     menu_options = {
-        '1': change_language,
-        '2': view_information,
-        '3': modify_settings,
-        '4': modify_patterns,
-        '5': lambda: menu(language),
-        '6': lambda: exit_program()
+        "1": lambda: execute_organizer_command('organize'),
+        "2": lambda: execute_organizer_command('organize_by_name_pattern'),
+        "3": lambda: execute_organizer_command('organize_by_size'),
+        "4": change_language,
+        "5": view_information,
+        "6": modify_settings,
+        "7": modify_patterns,
+        "8": exit_program
     }
 
     while True:
-        print("\nAdmin Menu:")
-        print("1. Change language")
-        print("2. View information")
-        print("3. Modify settings")
-        print("4. Modify patterns")
-        print("5. Return to main menu")
-        print("6. Exit")
+        print("\nMain Menu:")
+        print("1. Organize files")
+        print("2. Organize files by name pattern")
+        print("3. Organize files by size")
+        print("4. Change language")
+        print("5. View log")
+        print("6. Modify destination settings")
+        print("7. Modify name patterns")
+        print("8. Exit")
 
-        choice = input("Choose an option (1-6): ").strip()
-        log_action(f"Admin menu choice: {choice}")
+        choice = input("Choose an option (1-8): ").strip()
+        log_action(f"Menu choice: {choice}")
 
         if choice in menu_options:
             menu_options[choice]()
         else:
-            print("Invalid option. Please choose a number between 1 and 6.")
-            log_action("Invalid admin menu option")
+            print("Invalid option. Please choose a number between 1 and 8.")
+            log_action("Invalid menu option")
 
 def change_language():
     global language
@@ -256,56 +266,14 @@ def modify_patterns():
     except ValueError:
         print("Invalid input. You must enter a number.")
 
-def menu(language="en"):
-    greetings = {
-        "it": "Inserisci comandi o digita 'help' per vedere i comandi",
-        "en": "Enter commands or type 'help' to see commands"
-    }
-    print(greetings.get(language, greetings["en"]))
-
-    command = input("user: ").strip().lower()
-    log_action(f"User command: {command}")
-
-    commands = {
-        "exit": exit_program,
-        "organize": lambda: execute_organizer_command('organize'),
-        "organize_by_pattern": lambda: execute_organizer_command('organize_by_name_pattern'),
-        "organize_by_size": lambda: execute_organizer_command('organize_by_size'),
-        "admin": admin_mode,
-        "help": lambda: print_help(language)
-    }
-
-    if command in commands:
-        commands[command]()
-    else:
-        print("Unrecognized command")
-        log_action("Unrecognized command")
-        menu(language)
-
 def execute_organizer_command(command):
     organizer = FileOrganizer()
     print(f"Source folder: {organizer.source_folder}")
     getattr(organizer, command)()
-    menu(language)
-
-def admin_mode():
-    admin_password = input("Enter the password: ")
-    log_action("Admin mode activated")
-    if admin_password == "admin":
-        print("Admin mode activated")
-        admenu()
-
-def print_help(language):
-    help_text = {
-        "it": "comandi disponibili: organize, organize_by_pattern, organize_by_size, exit",
-        "en": "Available commands: organize, organize_by_pattern, organize_by_size, exit"
-    }
-    print(help_text.get(language, help_text["en"]))
-    menu(language)
 
 def exit_program():
     print("Exiting...")
     log_action("User exited")
     exit()
 
-menu(language)
+unified_menu(language)
